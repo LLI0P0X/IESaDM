@@ -55,21 +55,25 @@ a = [('Fish', 2018, 5054.0, 1117.0, 599.0, 3178.62, 2238.0, 0.8),
      ('Seed oil', 2021, 6.74, 0.45, 1.08, 2.46, 3.41, 0.9),
      ('Seed oil', 2022, 8.14, 0.31, 0.95, 3.43, 3.18, 0.9),
      ('Seed oil', 2023, 8.14, 0.07, 0.91, 3.58, 3.74, 0.9)]
-categoryList = ['Fish','Potato','Milk','Meat','Grain','Сonfectionery','Sugar','Seed oil']
-database_url = 'sqlite+aiosqlite:///database_village3.db'
+categoryList = ['Fish', 'Potato', 'Milk', 'Meat', 'Grain', 'Сonfectionery', 'Sugar', 'Seed oil']
+
+database_url = f"sqlite+aiosqlite:///village.db"
+
+
 class Base(DeclarativeBase):
     pass
 
 
 engine = create_async_engine(
-    url=f"sqlite+aiosqlite:///test1.db",
+    url=database_url,
     echo=False,
 )
+
 
 class Village(Base):
     __tablename__ = 'village'
 
-    idd: Mapped[int] = mapped_column(primary_key=True)
+    _id: Mapped[int] = mapped_column(primary_key=True)
     category: Mapped[str]
     year: Mapped[int | None]
     production: Mapped[float | None]
@@ -89,32 +93,39 @@ class Village(Base):
         CheckConstraint('doctrine >= 0', name='check_doctrine_positive'),
     )
 
+
 async def remove_duplicate_names():
     async with engine.begin() as conn:
         res = await conn.execute(
-            select(Village.idd).group_by(Village.category, Village.year).having(sqlalchemy.func.count() > 1)
+            select(Village._id).group_by(Village.category, Village.year).having(sqlalchemy.func.count() > 1)
         )
         dup = res.fetchall()
         for i in dup:
-            await conn.execute(delete(Village).where(Village.idd == i[0]))
+            await conn.execute(delete(Village).where(Village._id == i[0]))
         return len(dup)
+
 
 async def remove_all_duplicate_names():
     _l = 1
     while _l:
         _l = await remove_duplicate_names()
 
-async def checkNones():
+
+async def check_nones():
     async with engine.begin() as conn:
-        result = await conn.execute(select(Village).where(Village.year is None | Village.production is None | Village.reserve is None | Village.importsmth is None | Village.doctrine is None | Village.dom_consumption is None | Village.export is None))
+        result = await conn.execute(select(Village).where(
+            Village.year is None | Village.production is None | Village.reserve is None | Village.importsmth is None |
+            Village.doctrine is None | Village.dom_consumption is None | Village.export is None))
         for row in result:
             print(row)
 
-async def checkNames():
+
+async def check_names():
     async with engine.begin() as conn:
-        result = await conn.execute(select(Village).where(not(Village.category in categoryList)))
+        result = await conn.execute(select(Village).where(not (Village.category in categoryList)))
         for row in result:
             print(row)
+
 
 async def create_tables():
     async with engine.begin() as conn:
@@ -129,14 +140,16 @@ async def remove_tables():
 async def insert_village(village):
     async with engine.begin() as conn:
         await conn.execute(insert(Village).values(category=village[0], year=village[1], production=village[2],
-                           reserve=village[3], importsmth=village[4], dom_consumption=village[5], export=village[6],
-                           doctrine=village[7]))
+                                                  reserve=village[3], importsmth=village[4], dom_consumption=village[5],
+                                                  export=village[6], doctrine=village[7]))
+
 
 async def select_villages():
     async with engine.begin() as conn:
         result = await conn.execute(select(Village))
         for row in result:
             print(row)
+
 
 async def main():
     await remove_tables()
@@ -145,6 +158,7 @@ async def main():
         await insert_village(a[i])
     await remove_all_duplicate_names()
     await select_villages()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
