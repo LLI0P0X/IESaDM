@@ -18,8 +18,6 @@ def predictP(listP: list[float]) -> list[float]:
     return model.predict([[2023], [2024]])
 
 
-
-
 if __name__ == '__main__':
     numEP = clcNumEP(5.9, 430, 430, 5.1)
     print(predictP([6273, 7264, 5796, 5931, 6037, 6037]))
