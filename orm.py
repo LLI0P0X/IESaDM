@@ -7,6 +7,8 @@ import datetime
 import os
 import sqlalchemy
 
+import utils
+
 a = [('Fish', 2018, 5054.0, 1117.0, 599.0, 3178.62, 2238.0, 0.8),
      ('Fish', 2019, 4983.0, 1086.0, 647.0, 3256.86, 2118.0, 0.8),
      ('Fish', 2020, 4975.0, 1143.0, 606.0, 3095.83, 2400.0, 0.85),
@@ -82,6 +84,7 @@ class Village(Base):
     dom_consumption: Mapped[float | None]
     export: Mapped[float | None]
     doctrine: Mapped[float | None]
+    exportCapacity: Mapped[float | None]
 
     __table_args__ = (
         CheckConstraint('year >= 2015 AND year <= 2025', name='check_year_range'),
@@ -141,23 +144,32 @@ async def insert_village(village):
     async with engine.begin() as conn:
         await conn.execute(insert(Village).values(category=village[0], year=village[1], production=village[2],
                                                   reserve=village[3], importsmth=village[4], dom_consumption=village[5],
-                                                  export=village[6], doctrine=village[7]))
+                                                  export=village[6], doctrine=village[7], exportCapacity=village[8]))
 
 
 async def select_villages():
     async with engine.begin() as conn:
         result = await conn.execute(select(Village))
-        for row in result:
-            print(row)
+        return result.fetchall()
+
+async def get_village_columns():
+    async with engine.begin() as conn:
+        result = await conn.execute(select(Village))
+        return result.keys()
+
 
 
 async def main():
     await remove_tables()
     await create_tables()
     for i in range(len(a)):
-        await insert_village(a[i])
+        village=list(a[i])
+        village.append(utils.clcNumEP(village[2], village[3], village[4], village[5]))
+        await insert_village(village)
     await remove_all_duplicate_names()
-    await select_villages()
+    print(await select_villages())
+    print(await get_village_columns())
+
 
 
 if __name__ == "__main__":
