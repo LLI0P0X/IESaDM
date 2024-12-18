@@ -152,24 +152,38 @@ async def select_villages():
         result = await conn.execute(select(Village))
         return result.fetchall()
 
+
 async def get_village_columns():
     async with engine.begin() as conn:
         result = await conn.execute(select(Village))
         return result.keys()
 
 
+async def predict():
+    for category in categoryList:
+        async with engine.begin() as conn:
+            result = await conn.execute(select(Village).where(Village.category == category))
+            byCategory = result.fetchall()
+        pre = [category, byCategory[-1][2] + 1]
+        for col in range(3, len(byCategory[0])):
+            _list = [byCategory[st][col] for st in range(len(byCategory))]
+            _pre = utils.predict_next_element_linear(_list)
+            pre.append(_pre if _pre > 0 else 0)
+        await insert_village(pre)
+
 
 async def main():
     await remove_tables()
     await create_tables()
     for i in range(len(a)):
-        village=list(a[i])
+        village = list(a[i])
         village.append(utils.clcNumEP(village[2], village[3], village[4], village[5]))
         await insert_village(village)
     await remove_all_duplicate_names()
     print(await select_villages())
     print(await get_village_columns())
-
+    await predict()
+    await predict()
 
 
 if __name__ == "__main__":
